@@ -49,7 +49,7 @@ static string signature(string consumerSecret, string accessTokenSecret, METHOD 
 
   k64_encode (res, buf);
 
-  int len;
+  int len = 0;
   for (int i = 0; i < buf.length; i++) {
     if (buf.value[i] == '\0') {
       break;
