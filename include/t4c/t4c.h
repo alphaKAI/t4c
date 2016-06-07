@@ -6,7 +6,7 @@
 #define baseUrl      "https://api.twitter.com/1.1"
 #define oauthBaseUrl "https://api.twitter.com/oauth/"
 
-typedef enum method {
+typedef enum {
   POST,
   GET
 } METHOD;

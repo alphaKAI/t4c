@@ -70,7 +70,7 @@ static list* genOAuthParams(T4C* t4c) {
   return params;
 }
 
-static list* buildParams(T4C* t4c, list* oauthParams, list* additionalParam) {
+static list* buildParams(list* oauthParams, list* additionalParam) {
   list* params = (list*)malloc(sizeof(list));
 
   for(oauthParams->thisNode = oauthParams->firstNode; oauthParams->thisNode != NULL;
@@ -95,7 +95,7 @@ string request(T4C* t4c, METHOD method, string endPoint, list* paramsArgument) {
   string result;
 
   list* oauthParams = genOAuthParams(t4c);
-  list* params = buildParams(t4c, oauthParams, paramsArgument);
+  list* params = buildParams(oauthParams, paramsArgument);
 
   string url = new_string();
   url.length = strlen(baseUrl) + string_length(endPoint);
