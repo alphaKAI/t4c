@@ -49,6 +49,17 @@ static string signature(string consumerSecret, string accessTokenSecret, METHOD 
 
   k64_encode (res, buf);
 
+  int len;
+  for (int i = 0; i < buf.length; i++) {
+    if (buf.value[i] == '\0') {
+      break;
+    } else {
+      len++;
+    }
+  }
+
+  buf.length = len;
+
   return buf;
 }
 
@@ -102,16 +113,6 @@ string request(T4C* t4c, METHOD method, string endPoint, list* paramsArgument) {
   sprintf(url.value , "%s%s", baseUrl, string_get_value(endPoint));
 
   string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, params);
-  int len = 0;
-
-  for (int i = 0; i < oauthSignature.length; i++) {
-    if (oauthSignature.value[i] == '\0') {
-      break;
-    } else {
-      len++;
-    }
-  }
-  oauthSignature.length = len;
 
   string encodedSignature = url_encode(oauthSignature);
 
