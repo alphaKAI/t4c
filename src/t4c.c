@@ -26,21 +26,20 @@ static string signature(string consumerSecret, string accessTokenSecret, METHOD 
 
   string base;
 
-  char* method_str;
+  string method_str;
 
   if (method == POST) {
-    method_str = "POST";
+    method_str = make_string("POST");
   } else {
-    method_str = "GET";
+    method_str = make_string("GET");
   }
 
-  string encodedMethod = make_string(method_str);
   string encodedURL    = url_encode(url);
   string encodedQuery  = url_encode(query);
   
-  base.length = encodedMethod.length + 1 + encodedURL.length + 1 + encodedQuery.length;
+  base.length = method_str.length + 1 + encodedURL.length + 1 + encodedQuery.length;
   base.value  = (char*)malloc(sizeof(char) * base.length);
-  sprintf(base.value, "%s&%s&%s", string_get_value(encodedMethod), string_get_value(encodedURL), string_get_value(encodedQuery));
+  sprintf(base.value, "%s&%s&%s", string_get_value(method_str), string_get_value(encodedURL), string_get_value(encodedQuery));
 
   string res = hmac_sha1(key, base);
   string buf = new_string();
