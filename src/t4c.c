@@ -10,6 +10,8 @@
 #include <string.h>
 #include <time.h>
 
+#define DEBUG true
+
 static int k64_encode (string data, string buf) {
   return b64_ntop ((const unsigned char*)string_get_value(data), string_length(data), buf.value, buf.length);
 }
@@ -63,9 +65,7 @@ static string signature(string consumerSecret, string accessTokenSecret, METHOD 
   return buf;
 }
 
-static list* genOAuthParams(T4C* t4c) {
-  list* params = (list*)malloc(sizeof(list));
-
+static void genOAuthParams(T4C* t4c, list* params) {
   time_t now = time(NULL);
   char*  now_str = (char*)malloc(sizeof(char) * sizeof(now));
   sprintf(now_str, "%d", (int)now);
@@ -76,13 +76,9 @@ static list* genOAuthParams(T4C* t4c) {
   add_parameter(params, make_string("oauth_timestamp"), make_string(now_str));
   add_parameter(params, make_string("oauth_token"), t4c->accessToken);
   add_parameter(params, make_string("oauth_version"), make_string("1.0"));
-
-  return params;
 }
 
-static list* buildParams(list* oauthParams, list* additionalParam) {
-  list* params = (list*)malloc(sizeof(list));
-
+static void buildParams(list* params, list* oauthParams, list* additionalParam) {
   for(oauthParams->thisNode = oauthParams->firstNode; oauthParams->thisNode != NULL;
       oauthParams->thisNode = oauthParams->thisNode->nextNode) {
     add_parameter(params, oauthParams->thisNode->value.key, oauthParams->thisNode->value.value);
@@ -93,71 +89,106 @@ static list* buildParams(list* oauthParams, list* additionalParam) {
 
     for(adParams->thisNode = adParams->firstNode; adParams->thisNode != NULL;
       adParams->thisNode = adParams->thisNode->nextNode) {
-      string v = adParams->thisNode->value.value;
-      add_parameter(params, adParams->thisNode->value.key, url_encode(v));
+      string* v = &adParams->thisNode->value.value;
+      add_parameter(params, adParams->thisNode->value.key, url_encode(*v));
     }
   }
-  
-  return params;
+}
+
+static size_t curl_result_stringlize_callback(void* ptr, size_t size, size_t nmemb, void* data) {
+  if (size * nmemb == 0)
+    return 0;
+
+  size_t realsize = size * nmemb;
+  string* str = (string*)data;
+  str->length = realsize;
+  str->value = (char*)malloc(sizeof(char) * str->length);
+
+  if (str->value != NULL) {
+    memcpy(str->value, ptr, realsize);
+  }
+
+  return realsize;
 }
 
 string request(T4C* t4c, METHOD method, string endPoint, list* paramsArgument) {
   string result;
 
-  list* oauthParams = genOAuthParams(t4c);
-  list* params = buildParams(oauthParams, paramsArgument);
+  bool paramsArgumentWasNULL = false;
+  if (paramsArgument == NULL) {
+    paramsArgument = (list*)malloc(sizeof(list));
+    paramsArgumentWasNULL = true;
+  }
+
+  list oauthParams = {};
+  genOAuthParams(t4c, &oauthParams);
+
+  list params      = {};
+  buildParams(&params, &oauthParams, paramsArgument);
 
   string url = new_string();
   url.length = strlen(baseUrl) + string_length(endPoint);
   url.value  = (char*)malloc(sizeof(char) * url.length);
   sprintf(url.value , "%s%s", baseUrl, string_get_value(endPoint));
 
-  string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, params);
-
+  string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, &params);
   string encodedSignature = url_encode(oauthSignature);
 
-  add_parameter(oauthParams, make_string("oauth_signature"), encodedSignature);
-  add_parameter(params, make_string("oauth_signature"), encodedSignature);
+  add_parameter(&oauthParams, make_string("oauth_signature"), encodedSignature);
+  add_parameter(&params, make_string("oauth_signature"), encodedSignature);
 
   string authorize      = new_string();
-  string authorizeChild = join_parameters(oauthParams, ",");
+  string authorizeChild = join_parameters(&oauthParams, ",");
   authorize.length      = 21 + authorizeChild.length;
   authorize.value       = (char*)malloc(sizeof(char) * authorize.length);
   sprintf(authorize.value, "Authorization: OAuth %s", string_get_value(authorizeChild));
 
-  string path = join_parameters(params, "&");
+  string path = join_parameters(&params, "&");
 
-  printf("----------------------------\n");
-  printf("URL: %s\n", string_get_value(url));
-  printf("endPoint: %s\n", string_get_value(endPoint));
-  printf("path: %s\n", string_get_value(path));
-  printf("authorize: %s\n", string_get_value(authorize));
-  printf("----------------------------\n");
+  if (DEBUG) {
+    printf("----------------------------\n");
+    printf("URL: %s\n", string_get_value(url));
+    printf("endPoint: %s\n", string_get_value(endPoint));
+    printf("path: %s\n", string_get_value(path));
+    printf("authorize: %s\n", string_get_value(authorize));
+    printf("----------------------------\n");
+  }
 
-  //Currently, this program support only post request
-  if (method == POST) {
-    CURL* curl;
-    curl = curl_easy_init();
+  CURL* curl;
+  curl = curl_easy_init();
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.value);
+  string reqURL = new_string();
+  if (method == GET) {
+    reqURL.length = url.length + 1 + path.length;
+    reqURL.value  = (char*)malloc(sizeof(char) * reqURL.length);
+    sprintf(reqURL.value, "%s?%s", url.value, path.value);
 
-    struct curl_slist *headers = NULL;
-    headers = curl_slist_append(headers, string_get_value(authorize));
-
-    curl_easy_setopt(curl, CURLOPT_HEADER, headers);
-
+    curl_easy_setopt(curl, CURLOPT_URL, reqURL.value);
+  } else if (method == POST) {
     curl_easy_setopt(curl, CURLOPT_POST, 1);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, string_get_value(path));
     curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, path.length);
 
-    curl_easy_perform(curl);
-    curl_easy_cleanup(curl);
+    curl_easy_setopt(curl, CURLOPT_URL, url.value);
   }
+
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, string_get_value(authorize));
+  curl_easy_setopt(curl, CURLOPT_HEADER, headers);
+
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_result_stringlize_callback);
+  curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void*)&result);
+
+  curl_easy_perform(curl);
+  curl_easy_cleanup(curl);
 
   free_string(url);
   free_string(authorize);
-  free_parameters(oauthParams);
-  free_parameters(params);
+  free_parameters(&oauthParams);
+  free_parameters(&params);
+  if (paramsArgumentWasNULL) {
+    free_parameters(paramsArgument);
+  }
 
   return result;
 }
