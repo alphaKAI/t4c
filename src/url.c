@@ -1,16 +1,19 @@
 #include <t4c/string.h>
+#include <t4c/util.h>
 #include <t4c/url.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 string url_encode(string s) {
+  string result;
+
   int k, enn = 0;
   for(k = 0; k < s.length; ++k){
     if(url_unreserved(s.value[k])) enn += 1;
     else enn += 3;
   }
-  char *en = (char *)malloc(sizeof(char) * (enn + 1));
+  char *en = MALLOC_TN(char, (enn + 1));
   int ofst = 0;
   for(k = 0; k < s.length; ++k){
     if(url_unreserved(s.value[k])) en[ofst++] = s.value[k];
@@ -18,7 +21,9 @@ string url_encode(string s) {
   }
   en[ofst] = '\0';
 
-  return make_string(en);
+  result = make_string(en);
+
+  return result;
 }
 
 int url_unreserved(char c){

@@ -9,15 +9,16 @@ typedef struct {
   size_t length;
 } string;
 
-size_t string_length(string str);
-
 char* string_get_value(string str);
 
 string new_string(); 
 
 string make_string(char* char_str);
 
+string* make_string_ptr(char* char_str);
+
 void free_string(string str);
 
 bool string_set_value(string* str, char* char_str);
 #endif
+

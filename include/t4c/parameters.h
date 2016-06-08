@@ -1,19 +1,30 @@
 #ifndef T4C_PARAMETERS_INCLUDED
 #define T4C_PARAMETERS_INCLUDED
-
 #include <t4c/string.h>
+#include <stdbool.h>
 
-typedef struct _parameter {
+typedef struct {
   string key,
          value;
-} parameter;
-typedef struct _list list;
+} Parameter;
 
-list new_parameters();
+typedef struct _node {
+  Parameter* value;
+  struct _node* next;
+} Node;
 
-void add_parameter(list* params, string key, string value);
+typedef struct {
+  Node* firstNode;
+  size_t length;
+} Parameters;
 
-void free_parameters(list* params);
+Parameters* new_parameters();
 
-string join_parameters(list* params, char* separator);
+bool is_parameters_empty(Parameters* params);
+
+void add_parameter(Parameters* params, string key, string value);
+
+void free_parameters(Parameters* params);
+
+string join_parameters(Parameters* params, char* separator);
 #endif

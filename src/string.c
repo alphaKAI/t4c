@@ -5,11 +5,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-
-size_t string_length(string str) {
-  return str.length;
-}
-
 char* string_get_value(string str) {
   char* char_str;
 
@@ -25,7 +20,6 @@ char* string_get_value(string str) {
 string new_string() {
   string new_str;
 
-
   new_str.length = 0;
   new_str.value  = NULL;
 
@@ -40,10 +34,15 @@ string make_string(char* char_str) {
   return new_str;
 }
 
+string* make_string_ptr(char* char_str) {
+  string* v = (string*)malloc(sizeof(string));
+  *v = make_string(char_str);
+  return v;
+}
+
 void free_string(string str) {
-  if (str.value != NULL) {
-    free(str.value);
-  }
+  str.length = 0;
+  free(str.value);
 }
 
 bool string_set_value(string* str, char* char_str) {
