@@ -12,8 +12,7 @@ list new_parameters() {
 }
 
 void add_parameter(list* params, string key, string value) {
-
-  parameter new_param;
+  parameter new_param = {};
   new_param.key   = key;
   new_param.value = value;
   addNode(params, new_param);
