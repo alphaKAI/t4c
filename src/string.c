@@ -1,4 +1,5 @@
 #include <t4c/string.h>
+#include <t4c/util.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
@@ -8,7 +9,7 @@
 char* string_get_value(string str) {
   char* char_str;
 
-  char_str  = (char*)malloc(sizeof(char) * (str.length + 1));
+  char_str  = MALLOC_TN(char, str.length + 1);
 
   if (char_str != NULL) {
     memcpy(char_str, str.value, str.length);
@@ -34,12 +35,6 @@ string make_string(char* char_str) {
   return new_str;
 }
 
-string* make_string_ptr(char* char_str) {
-  string* v = (string*)malloc(sizeof(string));
-  *v = make_string(char_str);
-  return v;
-}
-
 void free_string(string str) {
   str.length = 0;
   free(str.value);
@@ -49,7 +44,7 @@ bool string_set_value(string* str, char* char_str) {
   size_t length = strlen(char_str);
   str->length   = length;
 
-  str->value  = (char*)malloc(sizeof(char) * (length + 1));
+  str->value  = MALLOC_TN(char, length + 1);
 
   if (str->value != NULL) {
     memcpy(str->value, char_str, length);

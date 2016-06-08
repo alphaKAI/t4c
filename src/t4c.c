@@ -70,7 +70,7 @@ static string signature(string consumerSecret, string accessTokenSecret, METHOD 
 
 static void genOAuthParams(T4C* t4c, Parameters* params) {
   time_t now = time(NULL);
-  char*  now_str = (char*)malloc(sizeof(now));
+  char*  now_str = MALLOC_TS(char, sizeof(now));
   sprintf(now_str, "%d", (int)now);
 
   add_parameter(params, make_string("oauth_consumer_key"), t4c->consumerKey);
@@ -141,7 +141,7 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   string authorize      = new_string();
   string authorizeChild = join_parameters(oauthParams, ",");
   authorize.length      = 21 + authorizeChild.length;
-  authorize.value       = (char*)malloc(sizeof(char) * authorize.length);
+  authorize.value       = MALLOC_TN(char, authorize.length);
   sprintf(authorize.value, "Authorization: OAuth %s", string_get_value(authorizeChild));
 
   string path = join_parameters(params, "&");
