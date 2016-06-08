@@ -20,4 +20,5 @@ typedef struct {
 
 string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgument);
 
+void stream(T4C* t4c, string url, size_t (*callback)(void*, size_t, size_t, void*));
 #endif

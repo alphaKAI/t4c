@@ -194,3 +194,60 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
 
   return result;
 }
+
+void stream(T4C* t4c, string url, size_t (*callback)(void*, size_t, size_t, void*)) {
+  Parameters* oauthParams = new_parameters();
+  genOAuthParams(t4c, oauthParams);
+  Parameters* params = new_parameters();
+  buildParams(params, oauthParams, NULL);
+
+  string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, GET, url, params);
+  string encodedSignature = url_encode(oauthSignature);
+
+  add_parameter(oauthParams, make_string("oauth_signature"), encodedSignature);
+  add_parameter(params, make_string("oauth_signature"), encodedSignature);
+
+  string authorize      = new_string();
+  string authorizeChild = join_parameters(oauthParams, ",");
+  authorize.length      = 21 + authorizeChild.length;
+  authorize.value       = MALLOC_TN(char, authorize.length);
+  sprintf(authorize.value, "Authorization: OAuth %s", string_get_value(authorizeChild));
+
+  string path = join_parameters(params, "&");
+
+  if (DEBUG) {
+    printf("----------------------------\n");
+    printf("STREAMING API");
+    printf("URL: %s\n", string_get_value(url));
+    printf("path: %s\n", string_get_value(path));
+    printf("authorize: %s\n", string_get_value(authorize));
+    printf("----------------------------\n");
+  }
+
+  CURL* curl;
+  curl = curl_easy_init();
+
+  string reqURL = new_string();
+
+  reqURL.length = url.length + 1 + path.length;
+  reqURL.value  = MALLOC_TN(char, reqURL.length);
+  sprintf(reqURL.value, "%s?%s", url.value, path.value);
+
+  curl_easy_setopt(curl, CURLOPT_URL, reqURL.value);
+
+  struct curl_slist *headers = NULL;
+  headers = curl_slist_append(headers, string_get_value(authorize));
+  curl_easy_setopt(curl, CURLOPT_HEADER, headers);
+
+  curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
+  curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0);
+
+  curl_easy_perform(curl);
+  curl_easy_cleanup(curl);
+
+  free_string(url);
+  free_string(path);
+  free_string(authorize);
+  free_parameters(oauthParams);
+  free_parameters(params);
+}
