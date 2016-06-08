@@ -135,8 +135,8 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, params);
   string encodedSignature = url_encode(oauthSignature);
 
-  add_parameter(*&oauthParams, make_string("oauth_signature"), encodedSignature);
-  add_parameter(*&params, make_string("oauth_signature"), encodedSignature);
+  add_parameter(oauthParams, make_string("oauth_signature"), encodedSignature);
+  add_parameter(params, make_string("oauth_signature"), encodedSignature);
 
   string authorize      = new_string();
   string authorizeChild = join_parameters(oauthParams, ",");
