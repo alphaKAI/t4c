@@ -27,28 +27,37 @@ static size_t streaming_callback_sample(void* ptr, size_t size, size_t nmemb, vo
 }
 
 int main() {
-  T4C t4c = {};
-
-  t4c.consumerKey       = make_string("Your Consumer Key");
-  t4c.consumerSecret    = make_string("Your Consumer Secret");
-  t4c.accessToken       = make_string("Your AccessToken");
-  t4c.accessTokenSecret = make_string("Your AccessTokenSecret");
+  T4C t4c = {
+    .consumerKey       = make_string("Your Consumer Key"),
+    .consumerSecret    = make_string("Your Consumer Secret"),
+    .accessToken       = make_string("Your AccessToken"),
+    .accessTokenSecret = make_string("Your AccessTokenSecret")
+  };
 
   // POST REQUEST
   Parameters* params = new_parameters();
+
   add_parameter(params, make_string("status"), make_string("Hello World!"));
+
   string result  = request(&t4c, POST, make_string("/statuses/update.json"), params);
-
   printf("RESULT for Tweet: %s\n", string_get_value(result));
-
-  // GET REQUEST
-  string result2 = request(&t4c, GET, make_string("/account/verify_credentials.json"), NULL);
-
-  printf("RESULT for /account/verify_credentials.json: %s\n", string_get_value(result2));
 
   free_parameters(params);
 
+  // GET REQUEST
+  string result2 = request(&t4c, GET, make_string("/account/verify_credentials.json"), NULL);
+  printf("RESULT for /account/verify_credentials.json: %s\n", string_get_value(result2));
+
   //STREAM API TEST
-  stream(&t4c, make_string("https://userstream.twitter.com/1.1/user.json"), streaming_callback_sample);
+  stream(&t4c, make_string("https://userstream.twitter.com/1.1/user.json"), NULL, streaming_callback_sample);
+  
+  /*
+     Also supports Streaming API with parameters:
+
+    Parameters* params = new_parameters();
+    add_parameter(params, make_string("track"), make_string("foobar"));
+    stream(&t4c, make_string("https://stream.twitter.com/1.1/statuses/filter.json"), params, streaming_callback_sample);
+    free_parameters(params);
+  */
   return 0;
 }
