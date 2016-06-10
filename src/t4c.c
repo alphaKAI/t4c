@@ -195,11 +195,18 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   return result;
 }
 
-void stream(T4C* t4c, string url, size_t (*callback)(void*, size_t, size_t, void*)) {
+void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)(void*, size_t, size_t, void*)) {
+
+  bool paramsArgumentWasNULL = false;
+  if (paramsArgument == NULL) {
+    paramsArgument = new_parameters();
+    paramsArgumentWasNULL = true;
+  }
+
   Parameters* oauthParams = new_parameters();
   genOAuthParams(t4c, oauthParams);
   Parameters* params = new_parameters();
-  buildParams(params, oauthParams, NULL);
+  buildParams(params, oauthParams, paramsArgument);
 
   string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, GET, url, params);
   string encodedSignature = url_encode(oauthSignature);
@@ -250,4 +257,7 @@ void stream(T4C* t4c, string url, size_t (*callback)(void*, size_t, size_t, void
   free_string(authorize);
   free_parameters(oauthParams);
   free_parameters(params);
+  if (paramsArgumentWasNULL) {
+    free_parameters(paramsArgument);
+  }
 }
