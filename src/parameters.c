@@ -83,11 +83,11 @@ static string join_parameter_key_and_value(Parameter* param, char* separator) {
 
 string join_parameters(Parameters* params, char* separator) {
   string str = new_string();
-//  if (params == NULL || is_parameters_empty(params)) return str;
+  if (params == NULL || is_parameters_empty(params)) return str;
 
   Node* thisNode;
 
-  for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {  
+  for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {
     string joined = join_parameter_key_and_value(thisNode->value, "=");
     str.length += joined.length;
 
@@ -98,12 +98,13 @@ string join_parameters(Parameters* params, char* separator) {
 
   str.value = MALLOC_TN(char, str.length);
 
-  for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {  
-    if (thisNode != params->firstNode) {
-      strcat(str.value, separator);
-    }
+  for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {
     string joined = join_parameter_key_and_value(thisNode->value, "=");
-    strcat(str.value, string_get_value(joined));
+    if (thisNode != params->firstNode) {
+      sprintf(str.value, "%s%s%s", string_get_value(str), separator, string_get_value(joined));
+    } else {
+      sprintf(str.value, "%s", string_get_value(joined));
+    }
   }
 
   return str;
