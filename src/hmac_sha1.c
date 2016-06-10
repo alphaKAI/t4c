@@ -10,8 +10,8 @@ string hmac_sha1(string key, string data){
   res.value  = MALLOC_TN(char, res.length);
 
   HMAC(EVP_sha1(), 
-      (const unsigned char*)string_get_value(key), key.length,
-      (const unsigned char*)string_get_value(data), data.length,
+      (const unsigned char*)key.value, key.length,
+      (const unsigned char*)data.value, data.length,
       (unsigned char*)res.value, (unsigned int*)&res.length);
 
   return res;
