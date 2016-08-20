@@ -246,6 +246,8 @@ void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)
   headers = curl_slist_append(headers, string_get_value(authorize));
   curl_easy_setopt(curl, CURLOPT_HEADER, headers);
 
+  curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
+  
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, callback);
   curl_easy_setopt(curl, CURLOPT_TIMEOUT, 0);
 

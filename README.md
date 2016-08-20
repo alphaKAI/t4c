@@ -147,6 +147,11 @@ stream(&t4c, make_string("https://stream.twitter.com/1.1/statuses/filter.json"),
 free_parameters(params);
 ```
 
+# Build
+  `$ make static`: build a static library(`t4c.a`)  
+  `$ make shared`: build a shared library(`t4c.so`)  
+  `$ make test`: build a test binary(`t4c_test/t4c_test`) this job is equivalent to `$ make test_static` in directly `t4c_test/`  
+
 # LICENSE
 The MIT LICENSE  
 Copyright (C) alphaKAI 2016 http://alpha-kai-net.info
