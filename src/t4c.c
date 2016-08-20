@@ -1,6 +1,6 @@
 #include <t4c/parameters.h>
 #include <t4c/hmac_sha1.h>
-#include <t4c/string.h>
+#include <sds/sds.h>
 #include <t4c/util.h>
 #include <t4c/t4c.h>
 #include <t4c/url.h>
@@ -10,62 +10,54 @@
 #include <string.h>
 #include <time.h>
 
+#include <sds/sds.h>
+
 #define WILL(x) fprintf(stderr, "WILL %s\n", x);
 #define END(x) fprintf(stderr, "END %s\n", x);
 #define DEBUG true
 #define DS(x) fprintf(stderr, "%s\n", x)
 
-static int k64_encode (string data, string buf) {
-  return b64_ntop ((const unsigned char*)string_get_value(data), data.length, buf.value, buf.length);
+static int k64_encode (sds data, sds buf) {
+  return b64_ntop ((const unsigned char*)data, sdslen(data), buf, sdslen(buf));
 }
 
-static string signature(string consumerSecret, string accessTokenSecret, METHOD method, string url, Parameters *params) {
-  string query      = join_parameters(params, "&");
-  string encodedCS  = url_encode(consumerSecret);
-  string encodedATS = url_encode(accessTokenSecret);
+static sds signature(sds consumerSecret, sds accessTokenSecret, METHOD method, sds url, Parameters *params) {
+  sds query      = join_parameters(params, "&");
+  sds encodedCS  = url_encode(consumerSecret);
+  sds encodedATS = url_encode(accessTokenSecret);
 
-  string key;
-  key.length = encodedCS.length + 1 + encodedATS.length;
-  key.value  = MALLOC_TN(char, key.length);
-  sprintf(key.value, "%s&%s", string_get_value(encodedCS), string_get_value(encodedATS));
+  sds key = sdscatprintf(sdsempty(), "%s&%s", encodedCS, encodedATS);
 
-  string base;
-
-  string method_str;
+  sds method_str;
 
   if (method == POST) {
-    method_str = make_string("POST");
+    method_str = sdsnew("POST");
   } else {
-    method_str = make_string("GET");
+    method_str = sdsnew("GET");
   }
 
-  string encodedURL    = url_encode(url);
-  string encodedQuery  = url_encode(query);
+  sds encodedURL    = url_encode(url);
+  sds encodedQuery  = url_encode(query);
   
-  base.length = method_str.length + 1 + encodedURL.length + 1 + encodedQuery.length;
-  base.value  = MALLOC_TN(char, base.length);
-  sprintf(base.value, "%s&%s&%s", string_get_value(method_str), string_get_value(encodedURL), string_get_value(encodedQuery));
+  sds base = sdscatprintf(sdsempty(), "%s&%s&%s", method_str, encodedURL, encodedQuery);
 
-  string res = hmac_sha1(key, base);
-  string buf = new_string();
+  sdsfree(method_str);
 
-  buf.length = 256;
-  buf.value  = MALLOC_TN(char, buf.length);
+  sds res = hmac_sha1(key, base);
+  sdsfree(key);
+  sdsfree(base);
+
+  sds buf = sdsempty();
+  buf = sdsgrowzero(buf, 256);
 
   k64_encode (res, buf);
 
-  int len = 0;
-  for (int i = 0; i < buf.length; i++) {
-    if (buf.value[i] == '\0') {
-      break;
-    } else {
-      len++;
-    }
-  }
+  sdsfree(res);
 
-  buf.length = len;
+  sds buf2 = sdsnewlen(buf, strlen(buf));
+  sdsfree(buf);
 
-  return buf;
+  return buf2;
 }
 
 static void genOAuthParams(T4C* t4c, Parameters* params) {
@@ -73,12 +65,12 @@ static void genOAuthParams(T4C* t4c, Parameters* params) {
   char*  now_str = MALLOC_TS(char, sizeof(now));
   sprintf(now_str, "%d", (int)now);
 
-  add_parameter(params, make_string("oauth_consumer_key"), t4c->consumerKey);
-  add_parameter(params, make_string("oauth_nonce"), make_string(now_str));
-  add_parameter(params, make_string("oauth_signature_method"), make_string("HMAC-SHA1"));
-  add_parameter(params, make_string("oauth_timestamp"), make_string(now_str));
-  add_parameter(params, make_string("oauth_token"), t4c->accessToken);
-  add_parameter(params, make_string("oauth_version"), make_string("1.0"));
+  add_parameter(params, sdsnew("oauth_consumer_key"), t4c->consumerKey);
+  add_parameter(params, sdsnew("oauth_nonce"), sdsnew(now_str));
+  add_parameter(params, sdsnew("oauth_signature_method"), sdsnew("HMAC-SHA1"));
+  add_parameter(params, sdsnew("oauth_timestamp"), sdsnew(now_str));
+  add_parameter(params, sdsnew("oauth_token"), t4c->accessToken);
+  add_parameter(params, sdsnew("oauth_version"), sdsnew("1.0"));
 
   free(now_str);
 }
@@ -102,19 +94,18 @@ static size_t curl_result_stringlize_callback(void* ptr, size_t size, size_t nme
     return 0;
 
   size_t realsize = size * nmemb;
-  string* str = (string*)data;
-  str->length = realsize;
-  str->value  = MALLOC_TN(char, str->length);
+  sds str = sdsempty();//sdsnew((char*)data);
+  str = sdsgrowzero(str, realsize);
 
-  if (str->value != NULL) {
-    memcpy(str->value, ptr, realsize);
+  if (str != NULL) {
+    memcpy(str, ptr, realsize);
   }
 
   return realsize;
 }
 
-string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgument) {
-  string result;
+sds request(T4C* t4c, METHOD method, sds endPoint, Parameters* paramsArgument) {
+  sds result;
 
   bool paramsArgumentWasNULL = false;
   if (paramsArgument == NULL) {
@@ -127,54 +118,47 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   Parameters* params = new_parameters();
   buildParams(params, oauthParams, paramsArgument);
 
-  string url = new_string();
-  url.length = strlen(baseUrl) + endPoint.length;
-  url.value  = MALLOC_TN(char, url.length);
-  sprintf(url.value , "%s%s", baseUrl, string_get_value(endPoint));
+  sds url = sdscatprintf(sdsempty(), "%s%s", baseUrl, endPoint);
 
-  string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, params);
-  string encodedSignature = url_encode(oauthSignature);
+  sds oauthSignature   = signature(t4c->consumerSecret, t4c->accessTokenSecret, method, url, params);
+  sds encodedSignature = url_encode(oauthSignature);
 
-  add_parameter(oauthParams, make_string("oauth_signature"), encodedSignature);
-  add_parameter(params, make_string("oauth_signature"), encodedSignature);
+  add_parameter(oauthParams, sdsnew("oauth_signature"), encodedSignature);
+  add_parameter(params, sdsnew("oauth_signature"), encodedSignature);
 
-  string authorize      = new_string();
-  string authorizeChild = join_parameters(oauthParams, ",");
-  authorize.length      = 21 + authorizeChild.length;
-  authorize.value       = MALLOC_TN(char, authorize.length);
-  sprintf(authorize.value, "Authorization: OAuth %s", string_get_value(authorizeChild));
+  sds authorizeChild = join_parameters(oauthParams, ",");
+  sds authorize      = sdscatprintf(sdsempty(), "Authorization: OAuth %s", authorizeChild);
 
-  string path = join_parameters(params, "&");
+  sds path = join_parameters(params, "&");
 
   if (DEBUG) {
     printf("----------------------------\n");
-    printf("URL: %s\n", string_get_value(url));
-    printf("endPoint: %s\n", string_get_value(endPoint));
-    printf("path: %s\n", string_get_value(path));
-    printf("authorize: %s\n", string_get_value(authorize));
+    printf("URL: %s\n", url);
+    printf("endPoint: %s\n", endPoint);
+    printf("path: %s\n", path);
+    printf("authorize: %s\n", authorize);
     printf("----------------------------\n");
   }
 
   CURL* curl;
   curl = curl_easy_init();
 
-  string reqURL = new_string();
-  if (method == GET) {
-    reqURL.length = url.length + 1 + path.length;
-    reqURL.value  = MALLOC_TN(char, reqURL.length);
-    sprintf(reqURL.value, "%s?%s", url.value, path.value);
+  sds reqURL = sdsempty();
 
-    curl_easy_setopt(curl, CURLOPT_URL, reqURL.value);
+  if (method == GET) {
+    reqURL = sdscatprintf(sdsempty(), "%s?%s", url, path);
+
+    curl_easy_setopt(curl, CURLOPT_URL, reqURL);
   } else if (method == POST) {
     curl_easy_setopt(curl, CURLOPT_POST, 1);
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, string_get_value(path));
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, path.length);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, path);
+    curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, sdslen(path));
 
-    curl_easy_setopt(curl, CURLOPT_URL, url.value);
+    curl_easy_setopt(curl, CURLOPT_URL, url);
   }
 
   struct curl_slist *headers = NULL;
-  headers = curl_slist_append(headers, string_get_value(authorize));
+  headers = curl_slist_append(headers, authorize);
   curl_easy_setopt(curl, CURLOPT_HEADER, headers);
 
   curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_result_stringlize_callback);
@@ -183,9 +167,12 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   curl_easy_perform(curl);
   curl_easy_cleanup(curl);
 
-  free_string(url);
-  free_string(path);
-  free_string(authorize);
+  sdsfree(oauthSignature);
+  sdsfree(encodedSignature);
+
+  sdsfree(url);
+  sdsfree(path);
+  sdsfree(authorize);
   free_parameters(oauthParams);
   free_parameters(params);
   if (paramsArgumentWasNULL) {
@@ -195,7 +182,7 @@ string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgum
   return result;
 }
 
-void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)(void*, size_t, size_t, void*)) {
+void stream(T4C* t4c, sds url, Parameters* paramsArgument, size_t (*callback)(void*, size_t, size_t, void*)) {
 
   bool paramsArgumentWasNULL = false;
   if (paramsArgument == NULL) {
@@ -208,42 +195,35 @@ void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)
   Parameters* params = new_parameters();
   buildParams(params, oauthParams, paramsArgument);
 
-  string oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, GET, url, params);
-  string encodedSignature = url_encode(oauthSignature);
+  sds oauthSignature = signature(t4c->consumerSecret, t4c->accessTokenSecret, GET, url, params);
+  sds encodedSignature = url_encode(oauthSignature);
 
-  add_parameter(oauthParams, make_string("oauth_signature"), encodedSignature);
-  add_parameter(params, make_string("oauth_signature"), encodedSignature);
+  add_parameter(oauthParams, sdsnew("oauth_signature"), encodedSignature);
+  add_parameter(params, sdsnew("oauth_signature"), encodedSignature);
 
-  string authorize      = new_string();
-  string authorizeChild = join_parameters(oauthParams, ",");
-  authorize.length      = 21 + authorizeChild.length;
-  authorize.value       = MALLOC_TN(char, authorize.length);
-  sprintf(authorize.value, "Authorization: OAuth %s", string_get_value(authorizeChild));
+  sds authorizeChild = join_parameters(oauthParams, ",");
+  sds authorize      = sdscatprintf(sdsempty(), "Authorization: OAuth %s", authorizeChild);
 
-  string path = join_parameters(params, "&");
+  sds path = join_parameters(params, "&");
 
   if (DEBUG) {
     printf("----------------------------\n");
     printf("STREAMING API");
-    printf("URL: %s\n", string_get_value(url));
-    printf("path: %s\n", string_get_value(path));
-    printf("authorize: %s\n", string_get_value(authorize));
+    printf("URL: %s\n", url);
+    printf("path: %s\n", path);
+    printf("authorize: %s\n", authorize);
     printf("----------------------------\n");
   }
 
   CURL* curl;
   curl = curl_easy_init();
 
-  string reqURL = new_string();
+  sds reqURL = sdscatprintf(sdsempty(), "%s?%s", url, path);
 
-  reqURL.length = url.length + 1 + path.length;
-  reqURL.value  = MALLOC_TN(char, reqURL.length);
-  sprintf(reqURL.value, "%s?%s", url.value, path.value);
-
-  curl_easy_setopt(curl, CURLOPT_URL, reqURL.value);
+  curl_easy_setopt(curl, CURLOPT_URL, reqURL);
 
   struct curl_slist *headers = NULL;
-  headers = curl_slist_append(headers, string_get_value(authorize));
+  headers = curl_slist_append(headers, authorize);
   curl_easy_setopt(curl, CURLOPT_HEADER, headers);
 
   curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 0);
@@ -254,9 +234,9 @@ void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)
   curl_easy_perform(curl);
   curl_easy_cleanup(curl);
 
-  free_string(url);
-  free_string(path);
-  free_string(authorize);
+  sdsfree(url);
+  sdsfree(path);
+  sdsfree(authorize);
   free_parameters(oauthParams);
   free_parameters(params);
   if (paramsArgumentWasNULL) {

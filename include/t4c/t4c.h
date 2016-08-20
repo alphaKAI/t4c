@@ -1,7 +1,7 @@
 #ifndef T4C_INCLUDED
 #define T4C_INCLUDED
 
-#include <t4c/string.h>
+#include <sds/sds.h>
 #include <t4c/parameters.h>
 #define baseUrl      "https://api.twitter.com/1.1"
 #define oauthBaseUrl "https://api.twitter.com/oauth/"
@@ -12,13 +12,13 @@ typedef enum {
 } METHOD;
 
 typedef struct {
-  string consumerKey, 
-         consumerSecret,
-         accessToken,
-         accessTokenSecret;
+  sds consumerKey, 
+      consumerSecret,
+      accessToken,
+      accessTokenSecret;
 } T4C;
 
-string request(T4C* t4c, METHOD method, string endPoint, Parameters* paramsArgument);
+sds request(T4C* t4c, METHOD method, sds endPoint, Parameters* paramsArgument);
 
-void stream(T4C* t4c, string url, Parameters* paramsArgument, size_t (*callback)(void*, size_t, size_t, void*));
+void stream(T4C* t4c, sds url, Parameters* paramsArgument, size_t (*callback)(void*, size_t, size_t, void*));
 #endif

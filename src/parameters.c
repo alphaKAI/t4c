@@ -1,9 +1,9 @@
 #include <t4c/parameters.h>
-#include <t4c/string.h>
 #include <t4c/util.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sds/sds.h>
 
 Parameters* new_parameters() {
   Parameters* newList = MALLOC_T(Parameters);
@@ -63,7 +63,7 @@ void add_param(Parameters* params, Parameter* param) {
   add_node(params, newNode);
 }
 
-void add_parameter(Parameters* params, string key, string value) {
+void add_parameter(Parameters* params, sds key, sds value) {
   Parameter* param = MALLOC_T(Parameter);
 
   param->key   = key;
@@ -72,38 +72,25 @@ void add_parameter(Parameters* params, string key, string value) {
   add_param(params, param);
 }
 
-static string join_parameter_key_and_value(Parameter* param, char* separator) {
-  string result = new_string();
-  result.length = param->key.length + strlen(separator) + param->value.length;
-  result.value  = MALLOC_TN(char, result.length);
-  sprintf(result.value, "%s%s%s", param->key.value, separator, param->value.value);
+static sds join_parameter_key_and_value(Parameter* param, char* separator) {
+  sds result = sdscatprintf(sdsempty(), "%s%s%s", param->key, separator, param->value);
 
   return result;
 }
 
-string join_parameters(Parameters* params, char* separator) {
-  string str = new_string();
-  if (params == NULL || is_parameters_empty(params)) return str;
+sds join_parameters(Parameters* params, char* separator) {
+  if (params == NULL || is_parameters_empty(params)) return sdsempty();
 
   Node* thisNode;
 
-  for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {
-    string joined = join_parameter_key_and_value(thisNode->value, "=");
-    str.length += joined.length;
-
-    if (thisNode != params->firstNode) {
-      str.length += strlen(separator);// for "&"
-    }
-  }
-
-  str.value = MALLOC_TN(char, str.length);
+  sds str = sdsempty();
 
   for (thisNode = params->firstNode; thisNode != NULL; thisNode = thisNode->next) {
-    string joined = join_parameter_key_and_value(thisNode->value, "=");
+    sds joined = join_parameter_key_and_value(thisNode->value, "=");
     if (thisNode != params->firstNode) {
-      sprintf(str.value, "%s%s%s", string_get_value(str), separator, string_get_value(joined));
+      str = sdscatprintf(sdsempty(), "%s%s%s", str, separator, joined);
     } else {
-      sprintf(str.value, "%s", string_get_value(joined));
+      str = sdscatprintf(sdsempty(), "%s", joined);
     }
   }
 

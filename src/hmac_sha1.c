@@ -1,18 +1,18 @@
-#include <t4c/string.h>
 #include <t4c/util.h>
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
+#include <sds/sds.h>
 
-string hmac_sha1(string key, string data){
-  string result = new_string(),
-         res    = new_string();
-  res.length = SHA_DIGEST_LENGTH + 1;
-  res.value  = MALLOC_TN(char, res.length);
+sds hmac_sha1(sds key, sds data){
+  sds res = sdsempty();
+  res = sdsgrowzero(res, SHA_DIGEST_LENGTH + 1);
+  
+  unsigned int len;
 
   HMAC(EVP_sha1(), 
-      (const unsigned char*)key.value, key.length,
-      (const unsigned char*)data.value, data.length,
-      (unsigned char*)res.value, (unsigned int*)&res.length);
+      key, sdslen(key),
+      (const unsigned char*)data, sdslen(data),
+      (unsigned char*)res, &len);
 
   return res;
 }

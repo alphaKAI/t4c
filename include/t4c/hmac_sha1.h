@@ -2,7 +2,7 @@
 #define T4C_HMAC_SHA1_INCLUDED
 
 #include <t4c/string.h>
-
-string hmac_sha1(string key, string data);
+#include <sds/sds.h>
+sds hmac_sha1(sds key, sds data);
 
 #endif

@@ -1,11 +1,11 @@
 #ifndef T4C_PARAMETERS_INCLUDED
 #define T4C_PARAMETERS_INCLUDED
-#include <t4c/string.h>
 #include <stdbool.h>
+#include <sds/sds.h>
 
 typedef struct {
-  string key,
-         value;
+  sds key,
+      value;
 } Parameter;
 
 typedef struct _node {
@@ -22,9 +22,9 @@ Parameters* new_parameters();
 
 bool is_parameters_empty(Parameters* params);
 
-void add_parameter(Parameters* params, string key, string value);
+void add_parameter(Parameters* params, sds key, sds value);
 
 void free_parameters(Parameters* params);
 
-string join_parameters(Parameters* params, char* separator);
+sds join_parameters(Parameters* params, char* separator);
 #endif

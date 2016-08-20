@@ -4,26 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sds/sds.h>
 
-string url_encode(string s) {
-  string result;
-
+sds url_encode(sds s) {
   int k, enn = 0;
-  for(k = 0; k < s.length; ++k){
-    if(url_unreserved(s.value[k])) enn += 1;
+  for(k = 0; k < sdslen(s); ++k){
+    if(url_unreserved(s[k])) enn += 1;
     else enn += 3;
   }
   char *en = MALLOC_TN(char, (enn + 1));
   int ofst = 0;
-  for(k = 0; k < s.length; ++k){
-    if(url_unreserved(s.value[k])) en[ofst++] = s.value[k];
-    else ofst += sprintf(en + ofst, "%%%02X", (unsigned char)s.value[k]);
+  for(k = 0; k < sdslen(s); ++k){
+    if(url_unreserved(s[k])) en[ofst++] = s[k];
+    else ofst += sprintf(en + ofst, "%%%02X", (unsigned char)s[k]);
   }
   en[ofst] = '\0';
 
-  result = make_string(en);
-
-  return result;
+  return sdsnew(en);
 }
 
 int url_unreserved(char c){

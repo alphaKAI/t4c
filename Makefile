@@ -2,7 +2,7 @@ CC      = clang
 AR			= ar
 CFLAGS  = -g -MMD -MP
 LDFLAGS = -L/usr/local/opt/openssl/lib -lcrypto -lresolv -lcurl -lpcre
-LIBS    =
+LIBS    = ./libs/sds/sds.a
 INCLUDE = -I./include -I./libs
 SRC_DIR = ./src
 OBJ_DIR = ./build
@@ -14,13 +14,16 @@ DEPENDS = $(OBJS:.o=.d)
 
 all: $(TARGET)
 
+libs/sds/sds.a: libs/sds/Makefile
+	cd libs/sds; make static
+
 static: $(OBJS) $(LIBS)
 	echo "[make - static]"
 	$(AR) rv t4c.a $^
 
 shared: $(OBJS) $(LIBS)
 	echo "[make - shared]"
-	$(CC) $(SHARED_FLAGS) -o libt4c.so $(OBJS) $(LDFLAGS)
+	$(CC) $(SHARED_FLAGS) -o libt4c.so $(OBJS) $(LIBS) $(LDFLAGS)
 
 test: t4c_test/Makefile
 	echo "[make - test(static)]"
