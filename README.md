@@ -19,21 +19,23 @@ You should include for using t4c these headers:
 * t4c/parameters.h
 * t4c/string.h
 * t4c/t4c.h
+* sds/sds.h
 
 ```c
 #include <t4c/parameters.h>
 #include <t4c/string.h>
 #include <t4c/t4c.h>
+#include <sds/sds.h>
 ```
   
 #At first, Define and Initialize an instance of T4C
 
 ```c
 T4C t4c = {
-  .consumerKey       = make_string("Your Consumer Key"),
-  .consumerSecret    = make_string("Your Consumer Secret"),
-  .accessToken       = make_string("Your AccessToken"),
-  .accessTokenSecret = make_string("Your AccessTokenSecret")
+  .consumerKey       = sdsnew("Your Consumer Key"),
+  .consumerSecret    = sdsnew("Your Consumer Secret"),
+  .accessToken       = sdsnew("Your AccessToken"),
+  .accessTokenSecret = sdsnew("Your AccessTokenSecret")
 };
 ```
   
@@ -51,7 +53,7 @@ Parameters* params = new_parameters();
 ##2. Add parameter's key and that of value
 
 ```c
-add_parameter(params, make_string("Key"), make_string("Value"));
+add_parameter(params, sdsnew("Key"), sdsnew("Value"));
 ```
 
 ##If the parameters are unneeded, you should free as follows
@@ -83,9 +85,9 @@ Returns:
 ```c
 Parameters* params = new_parameters();
 
-add_parameter(params, make_string("status"), make_string("Hello World!"));
+add_parameter(params, sdsnew("status"), sdsnew("Hello World!"));
 
-string result = request(&t4c, POST, make_string("/statuses/update.json"), params);
+string result = request(&t4c, POST, sdsnew("/statuses/update.json"), params);
 
 printf("RESULT for Tweet: %s\n", string_get_value(result));
 
@@ -96,7 +98,7 @@ free_parameters(params);
 This API doesn't require essential parameter.  
 
 ```c
-string result = request(&t4c, GET, make_string("/account/verify_credentials.json"), NULL);
+string result = request(&t4c, GET, sdsnew("/account/verify_credentials.json"), NULL);
 
 printf("RESULT for /account/verify_credentials.json: %s\n", string_get_value(result));
 ```
@@ -129,7 +131,7 @@ static size_t streaming_callback_sample(void* ptr, size_t size, size_t nmemb, vo
 ##UserStream user.json
 
 ```c
-stream(&t4c, make_string("https://userstream.twitter.com/1.1/user.json"), NULL, streaming_callback_sample);
+stream(&t4c, sdsnew("https://userstream.twitter.com/1.1/user.json"), NULL, streaming_callback_sample);
 /*
   If any result from twitter recives, streaming_callback_sample is called.
 */
@@ -140,9 +142,9 @@ stream(&t4c, make_string("https://userstream.twitter.com/1.1/user.json"), NULL, 
 ```c
 Parameters* params = new_parameters();
 
-add_parameter(params, make_string("track"), make_string("foobar"));
+add_parameter(params, sdsnew("track"), sdsnew("foobar"));
 
-stream(&t4c, make_string("https://stream.twitter.com/1.1/statuses/filter.json"), params, streaming_callback_sample);
+stream(&t4c, sdsnew("https://stream.twitter.com/1.1/statuses/filter.json"), params, streaming_callback_sample);
 
 free_parameters(params);
 ```
