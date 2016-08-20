@@ -14,6 +14,8 @@ sds hmac_sha1(sds key, sds data){
       (const unsigned char*)data, sdslen(data),
       (unsigned char*)res, &len);
 
+  res = sdsnewlen(res, len);
+
   return res;
 }
 

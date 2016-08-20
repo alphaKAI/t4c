@@ -153,5 +153,8 @@ free_parameters(params);
   `$ make test`: build a test binary(`t4c_test/t4c_test`) this job is equivalent to `$ make test_static` in directly `t4c_test/`  
 
 # LICENSE
-The MIT LICENSE  
-Copyright (C) alphaKAI 2016 http://alpha-kai-net.info
+This library is relased under the MIT license. Pleas see the `LICENSE` for details.  
+Copyright (C) alphaKAI 2016 http://alpha-kai-net.info  
+  
+This library includes [sds](https://github.com/antirez/sds).  
+The library is relased under BSD two clause license. Plase see the `libs/sds/LICENSE` for details.  

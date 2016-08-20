@@ -20,7 +20,8 @@ sds url_encode(sds s) {
   }
   en[ofst] = '\0';
 
-  return sdsnew(en);
+  sds sen = sdsnew(en);
+  return sen;
 }
 
 int url_unreserved(char c){

@@ -19,14 +19,20 @@ void free_all_parameter(Node* node) {
       free_all_parameter(node->next);
     }
 
-    free(node->value);
     free(node);
+    node = NULL;
   }
 }
 
 void free_parameters(Parameters* params) {
-  free_all_parameter(params->firstNode);
-  free(params);
+  if (params != NULL) {
+    if (params->firstNode != NULL) {
+      free_all_parameter(params->firstNode);
+    }
+
+    free(params);
+    params = NULL;
+  }
 }
 
 Node* get_last_node(Parameters* params) {
